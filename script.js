@@ -1,16 +1,31 @@
 // Firebase Configuration
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-app.js";
+import {
+  getFirestore,
+  collection,
+  addDoc,
+  getDocs,
+  deleteDoc,
+  doc,
+  onSnapshot,
+  updateDoc,
+  query,
+  orderBy,
+} from "https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js";
+
+// Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyAqIYY_U_cl1ADFM0k8qd8dZY1XvT4orzM",
-  authDomain: "fir-8d7a4.firebaseapp.com",
-  projectId: "fir-8d7a4",
-  storageBucket: "fir-8d7a4.firebasestorage.app",
-  messagingSenderId: "468472822751",
-  appId: "1:468472822751:web:1bb700059f78c7c54d626a",
+  apiKey: "AIzaSyBf8mWqG0U4rL1gQ-a2MM4u2GpMHdrNLFI",
+  authDomain: "todo-web-app-3ace9.firebaseapp.com",
+  projectId: "todo-web-app-3ace9",
+  storageBucket: "todo-web-app-3ace9.appspot.com",
+  messagingSenderId: "26808413821",
+  appId: "1:26808413821:web:32e9b6881b4adb7d190b14",
 };
 
 // Initialize Firebase
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
 // DOM Elements
 const todoInput = document.getElementById("todo-input");
@@ -21,64 +36,57 @@ const todoList = document.getElementById("todo-list");
 let editId = null; // Track which task is being edited
 
 /** ✅ CREATE Operation **/
-addBtn.addEventListener("click", () => {
+addBtn.addEventListener("click", async () => {
   const task = todoInput.value.trim();
   if (task) {
-    db.collection("todos").add({
+    await addDoc(collection(db, "todos"), {
       task: task,
       completed: false,
-      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      createdAt: new Date(),
     });
     todoInput.value = "";
   }
 });
 
 /** ✅ READ Operation **/
-db.collection("todos")
-  .orderBy("createdAt")
-  .onSnapshot((snapshot) => {
-    todoList.innerHTML = "";
-    snapshot.forEach((doc) => {
-      const todo = doc.data();
-      const li = document.createElement("li");
-      li.innerHTML = `
+const todosQuery = query(collection(db, "todos"), orderBy("createdAt"));
+onSnapshot(todosQuery, (snapshot) => {
+  todoList.innerHTML = "";
+  snapshot.forEach((doc) => {
+    const todo = doc.data();
+    const li = document.createElement("li");
+    li.innerHTML = `
             ${todo.task}
             <div>
                 <button onclick="editTodo('${doc.id}', '${todo.task}')">Edit</button>
                 <button onclick="deleteTodo('${doc.id}')">Delete</button>
             </div>
         `;
-      todoList.appendChild(li);
-    });
+    todoList.appendChild(li);
   });
+});
 
 /** ✅ UPDATE Operation **/
-updateBtn.addEventListener("click", () => {
+updateBtn.addEventListener("click", async () => {
   const updatedTask = todoInput.value.trim();
   if (updatedTask && editId) {
-    db.collection("todos")
-      .doc(editId)
-      .update({
-        task: updatedTask,
-      })
-      .then(() => {
-        addBtn.style.display = "inline-block";
-        updateBtn.style.display = "none";
-        todoInput.value = "";
-        editId = null;
-      });
+    await updateDoc(doc(db, "todos", editId), { task: updatedTask });
+    addBtn.style.display = "inline-block";
+    updateBtn.style.display = "none";
+    todoInput.value = "";
+    editId = null;
   }
 });
 
 /** ✅ EDIT Function **/
-function editTodo(id, task) {
+window.editTodo = (id, task) => {
   todoInput.value = task;
   editId = id;
   addBtn.style.display = "none";
   updateBtn.style.display = "inline-block";
-}
+};
 
 /** ✅ DELETE Operation **/
-function deleteTodo(id) {
-  db.collection("todos").doc(id).delete();
-}
+window.deleteTodo = async (id) => {
+  await deleteDoc(doc(db, "todos", id));
+};
